@@ -368,6 +368,7 @@ pub(crate) fn calculate_leader_logs(db_path: &PathBuf, byron_genesis: &PathBuf, 
                                             }
                                             match calculate_ledger_state_sigma_and_d(ledger_state, ledger_set, pool_id) {
                                                 Ok(((active_stake, total_active_stake), decentralization_param)) => {
+                                                    trace!("activeStake: {:?}, totalActiveStake: {:?}", &active_stake, &total_active_stake);
                                                     let sigma = Rational::from((active_stake, total_active_stake));
                                                     debug!("sigma: {:?}", sigma);
                                                     debug!("decentralization_param: {:?}", &decentralization_param);

@@ -103,7 +103,7 @@ checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
 [[package]]
 name = "cardano_ouroboros_network"
 version = "0.0.1-dev"
-source = "git+https://github.com/AndrewWestberg/rust-cardano-ouroboros-network?rev=bc741c5#bc741c5c831bd992288fbd9e25b91fb4d06dacc6"
+source = "git+https://github.com/AndrewWestberg/rust-cardano-ouroboros-network?rev=b6af497#b6af4976a34ea333541dcf274f37432dc2ec1660"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -1263,9 +1263,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.53"
+version = "1.0.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8833e20724c24de12bbaba5ad230ea61c3eafb05b881c7c9d3cfe8638b187e68"
+checksum = "9a2af957a63d6bd42255c359c93d9bfdb97076bd3b820897ce55ffbfbf107f44"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use cardano_ouroboros_network::mux;
 use cardano_ouroboros_network::mux::Cmd;
+use log::info;
 use rug::{Float, Rational};
 use rug::float::Round;
 use rug::ops::MulAssignRound;
@@ -12,6 +13,13 @@ use super::*;
 
 #[test]
 fn test_is_overlay_slot() {
+    match var("RUST_LOG") {
+        Ok(_) => {}
+        Err(_) => {
+            // set a default logging level of info if unset.
+            set_var("RUST_LOG", "info");
+        }
+    }
     pretty_env_logger::init_timed();
 
     let first_slot_of_epoch = 15724800_i64;
@@ -38,4 +46,22 @@ fn test_ping() {
     mux::start(&mut stdout, Cmd::Ping, &PathBuf::new(), &host, port, network_magic, &String::new(), &PathBuf::new(), &String::new(), &String::new());
 
     assert_eq!(&std::str::from_utf8(&stdout).unwrap()[..99], "{\n \"status\": \"ok\",\n \"host\": \"north-america.relays-new.cardano-testnet.iohkdev.io\",\n \"port\": 3001,\n ");
+}
+
+#[test]
+fn test_rational() {
+    match var("RUST_LOG") {
+        Ok(_) => {}
+        Err(_) => {
+            // set a default logging level of info if unset.
+            set_var("RUST_LOG", "info");
+        }
+    }
+    pretty_env_logger::init_timed();
+
+    let active_stake = 20374829620952_u64;
+    let total_active_stake = 20094293921511214_u64;
+    info!("activeStake: {:?}, totalActiveStake: {:?}", &active_stake, &total_active_stake);
+    let sigma = Rational::from((active_stake, total_active_stake));
+    info!("sigma: {:?}", sigma);
 }

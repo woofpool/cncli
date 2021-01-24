@@ -1,11 +1,11 @@
-use std::ops::Div;
 use std::str::FromStr;
 
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, One, Zero};
 use rug::{Float, Rational};
 use rug::float::Round;
-use rug::ops::{MulAssignRound, SubFrom};
+use rug::ops::MulAssignRound;
 
+use cncli::nodeclient::math::{ceiling, exp, find_e, ln, split_ln};
 use cncli::nodeclient::ping;
 use nodeclient::leaderlog::is_overlay_slot;
 use nodeclient::math::ipow;
@@ -79,6 +79,83 @@ fn test_ping_failure_bad_magic() {
 }
 
 #[test]
+fn test_eps() {
+    let eps = BigDecimal::from_str("1.E-24").unwrap();
+    // println!("1/10^24 = {}", eps);
+    assert_eq!(eps.to_string(), "0.000000000000000000000001");
+}
+
+#[test]
+fn test_ceiling() {
+    let x = BigDecimal::from_str("1234.00000").unwrap();
+    let ceil_x = ceiling(&x);
+    assert_eq!(ceil_x, BigDecimal::from(1234));
+
+    let y = BigDecimal::from_str("1234.0000000000123").unwrap();
+    let ceil_y = ceiling(&y);
+    assert_eq!(ceil_y, BigDecimal::from(1235))
+}
+
+#[test]
+fn test_exp() {
+    let x = BigDecimal::zero();
+    let exp_x = exp(&x);
+    assert_eq!(exp_x, BigDecimal::one());
+
+    let x = BigDecimal::one();
+    let exp_x = exp(&x);
+    assert_eq!(exp_x.to_string(), "2.7182818284590452353602874043083282");
+
+    let x = BigDecimal::from_str("-54.268914").unwrap();
+    let exp_x = exp(&x);
+    assert_eq!(exp_x.to_string(), "0.0000000000000000000000026996664594");
+}
+
+#[test]
+fn test_find_e() {
+    let exp1 = exp(&BigDecimal::one());
+    let x = BigDecimal::from_str("-1").unwrap();
+    let n = find_e(&exp1, &x);
+    println!("find_e({}) = {}", &x, n);
+}
+
+#[test]
+fn test_split_ln() {
+    let exp1 = exp(&BigDecimal::one());
+    let x = BigDecimal::from_str("2.9").unwrap();
+    let (n, xp) = split_ln(&exp1, &x);
+    println!("n: {}, xp: {}", n, xp);
+}
+
+#[test]
+fn test_ln() {
+    let x = BigDecimal::one();
+    let ln_x = ln(&x);
+    assert_eq!(ln_x.to_string(), "0");
+}
+
+#[test]
+fn test_infinite_range_stuff() {
+    let mut range = 1..;
+
+    let mut i = 0;
+
+    while i < 1024 {
+        let an = range.by_ref().take(1).next().unwrap();
+        let bn = an * an;
+        println!("an: {}, bn: {}, range: {:?}", an, bn, &range);
+        i += 1;
+    }
+
+
+    // let x:&[i32] = &(1..1025).collect()[..];
+    // let y: &[i32] = &(1..1025).map(|m| m * m).collect()[..];
+    //
+    // println!("x: {:?}", x);
+    // println!("y: {:?}", y);
+}
+
+#[test]
 fn test_pow() {
     let mut x = BigDecimal::from_str("0.2587").unwrap();
     let mut y = ipow(&x, 5);
@@ -87,17 +164,4 @@ fn test_pow() {
     x = BigDecimal::from_str("-17.2589").unwrap();
     y = ipow(&x, 5);
     println!("{}^5 = {}", x, y);
-}
-
-#[test]
-fn test_ln() {
-    let mut c: Float = Float::with_val(120, 0.05_f64);
-    c.sub_from(1);
-    c.ln_round(Round::Down);
-    println!("c: {}", &c.to_string_radix(10, None));
-    println!("ln(1-f) = ln (0.95) = -0.0512932943875505334261962382072846");
-
-    let f = BigDecimal::from_str("0.05").unwrap().with_prec(10).with_scale(34);
-    let other = BigDecimal::from(27u8).with_prec(10).with_scale(34);
-    println!("f: {}", f.div(other).with_scale(35).round(34));
 }

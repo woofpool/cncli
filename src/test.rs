@@ -131,7 +131,12 @@ fn test_split_ln() {
 fn test_ln() {
     let x = BigDecimal::one();
     let ln_x = ln(&x);
-    assert_eq!(ln_x.to_string(), "0");
+    assert_eq!(ln_x.to_string(), "0.0000000000000000000000000000000000");
+
+    let x = BigDecimal::from_str("0.95").unwrap();
+    let ln_x = ln(&x);
+    assert_eq!(ln_x.to_string(), "-0.0512932943875505334261962382072846");
+    println!("ln(1-f) = ln (0.95) = {}", ln_x);
 }
 
 #[test]

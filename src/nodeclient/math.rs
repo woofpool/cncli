@@ -1,4 +1,3 @@
-use std::ops::RangeFrom;
 use std::str::FromStr;
 
 use bigdecimal::{BigDecimal, One, ToPrimitive, Zero};
@@ -55,9 +54,8 @@ fn lncf(max_n: i32, x: &BigDecimal) -> BigDecimal {
         panic!("Cannot call lncf with x < 0")
     }
 
-    let range = 1..;
     let eps = BigDecimal::from_str("1.E-24").unwrap();
-    return cf(max_n, 0, &eps, None, &BigDecimal::one(), &BigDecimal::zero(), &BigDecimal::zero(), &BigDecimal::one(), range);
+    return cf(max_n, x, &eps, &BigDecimal::one(), &BigDecimal::zero(), &BigDecimal::zero(), &BigDecimal::one());
 }
 
 // -- | Compute natural logarithm via continued fraction, first splitting integral
@@ -128,24 +126,80 @@ pub fn ln(x: &BigDecimal) -> BigDecimal {
 //     aN = bn * aNm1 + an * aNm2
 //     bN = bn * bNm1 + an * bNm2
 // cf _ _ _ _ _ _ aN bN _ _ = aN / bN
-fn cf(max_n: i32, n: i32, epsilon: &BigDecimal, last_val: Option<&BigDecimal>, a_nm2: &BigDecimal, b_nm2: &BigDecimal, a_nm1: &BigDecimal, b_nm1: &BigDecimal, mut range: RangeFrom<i32>) -> BigDecimal {
-    let b_bn = normalize(BigDecimal::from(range.by_ref().take(1).next().unwrap()));
-    let a_an = normalize(&b_bn * &b_bn);
-    let a_n = normalize(&b_bn * a_nm1 + &a_an * a_nm2);
-    let b_n = normalize(&b_bn * b_nm1 + &a_an * b_nm2);
-    let xn = normalize(&a_n / &b_n);
-    if max_n == n {
-        return xn;
-    }
-    let converges = match last_val {
-        None => { false }
-        Some(x) => { &(x - &xn).abs() < epsilon }
-    };
-    if converges {
-        return xn;
+//fn cf(max_n: i32, n: i32, epsilon: &BigDecimal, last_val: Option<&BigDecimal>, a_nm2: &BigDecimal, b_nm2: &BigDecimal, a_nm1: &BigDecimal, b_nm1: &BigDecimal, mut range: RangeFrom<i32>) -> BigDecimal {
+// let b_bn = normalize(BigDecimal::from(range.by_ref().take(1).next().unwrap()));
+// let a_an = normalize(&b_bn * &b_bn);
+// let a_n = normalize(&b_bn * a_nm1 + &a_an * a_nm2);
+// let b_n = normalize(&b_bn * b_nm1 + &a_an * b_nm2);
+// let xn = normalize(&a_n / &b_n);
+// if max_n == n {
+//     return xn;
+// }
+// let converges = match last_val {
+//     None => { false }
+//     Some(x) => { &(x - &xn).abs() < epsilon }
+// };
+// if converges {
+//     return xn;
+// }
+//
+// return cf(max_n, n + 1, epsilon, Some(&xn), a_nm1, b_nm1, &a_n, &b_n, range);
+//}
+
+// def cf(maxN,x,epsilon,aNm2,bNm2,aNm1,bNm1):
+//     an = x
+//     bn = 1
+//     aN = bn * aNm1 + an * aNm2
+//     bN = bn * bNm1 + an * bNm2
+//     aNm2 = aNm1
+//     bNm2 = bNm1
+//     aNm1 = aN
+//     bNm1 = bN
+//     x_ = aN / bN
+//     for n in range(2,maxN+1):
+//         if n % 2 == 0:
+//             an = (n/2)**2 * x
+//         bn = n
+//         aN = bn * aNm1 + an * aNm2
+//         bN = bn * bNm1 + an * bNm2
+//         aNm2 = aNm1
+//         bNm2 = bNm1
+//         aNm1 = aN
+//         bNm1 = bN
+//         xn = aN / bN
+//         if abs(x_ - xn) < epsilon:
+//             return xn
+//         x_ = xn
+//     return x_
+fn cf(max_n: i32, x: &BigDecimal, epsilon: &BigDecimal, a_nm_2: &BigDecimal, b_nm_2: &BigDecimal, a_nm_1: &BigDecimal, b_nm_1: &BigDecimal) -> BigDecimal {
+    let mut an = x.clone();
+    let mut bn = BigDecimal::one();
+    let mut a_n = normalize(&bn * a_nm_1 + &an * a_nm_2);
+    let mut b_n = normalize(&bn * b_nm_1 + &an * b_nm_2);
+    let mut a_nm_2 = a_nm_1.clone();
+    let mut b_nm_2 = b_nm_1.clone();
+    let mut a_nm_1 = a_n.clone();
+    let mut b_nm_1 = b_n.clone();
+    let mut xp = normalize(&a_n / &b_n);
+    for n in 2..(max_n + 1) {
+        if n % 2 == 0 {
+            an = normalize(BigDecimal::from((n / 2).pow(2)) * x);
+        }
+        bn = BigDecimal::from(n);
+        a_n = normalize(&bn * &a_nm_1 + &an * &a_nm_2);
+        b_n = normalize(&bn * &b_nm_1 + &an * &b_nm_2);
+        a_nm_2 = a_nm_1.clone();
+        b_nm_2 = b_nm_1.clone();
+        a_nm_1 = a_n.clone();
+        b_nm_1 = b_n.clone();
+        let xn = normalize(&a_n / &b_n);
+        if (&xp - &xn).abs() < *epsilon {
+            return xn;
+        }
+        xp = xn;
     }
 
-    return cf(max_n, n + 1, epsilon, Some(&xn), a_nm1, b_nm1, &a_n, &b_n, range);
+    return xp;
 }
 
 // taylorExp :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a

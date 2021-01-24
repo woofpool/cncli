@@ -220,6 +220,37 @@ fn taylor_exp(eps: &BigDecimal, max_n: i32, n: i32, x: &BigDecimal, last_x: &Big
     taylor_exp(eps, max_n, n + 1, x, &next_x, &(acc + &next_x), &(divisor + BigDecimal::one()))
 }
 
+pub enum TaylorCmp {
+    Above,
+    Below,
+    MaxReached,
+}
+
+pub fn taylor_exp_cmp(bound_x: i32, cmp: &BigDecimal, x: &BigDecimal) -> TaylorCmp {
+    let max_n: i32 = 1000;
+    let bound_xf = BigDecimal::from(bound_x);
+    let mut divisor: i32 = 1;
+    let mut acc: BigDecimal = BigDecimal::one();
+    let mut err: BigDecimal = x.clone();
+    let mut error_term: BigDecimal = normalize(&err * &bound_xf);
+    let mut next_x: BigDecimal;
+    for _n in 0..max_n {
+        if cmp >= &normalize(&acc + &error_term) {
+            return TaylorCmp::Above;
+        } else if cmp < &normalize(&acc - &error_term) {
+            return TaylorCmp::Below;
+        } else {
+            divisor += 1;
+            next_x = err.clone();
+            err = normalize(normalize(&err * x) / BigDecimal::from(divisor));
+            error_term = normalize(&err * &bound_xf);
+            acc = normalize(&acc + &next_x);
+        }
+    }
+
+    TaylorCmp::MaxReached
+}
+
 // splitLn :: (RealFrac a, Show a) => a -> (Integer, a)
 // splitLn x = (n, x')
 //   where n = findE exp1 x
@@ -337,6 +368,6 @@ fn contract(factor: &BigDecimal, x: &BigDecimal, l: i32, u: i32) -> i32 {
     }
 }
 
-fn normalize(x: BigDecimal) -> BigDecimal {
+pub fn normalize(x: BigDecimal) -> BigDecimal {
     x.with_scale(34)
 }

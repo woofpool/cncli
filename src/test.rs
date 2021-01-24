@@ -169,4 +169,8 @@ fn test_pow() {
     x = BigDecimal::from_str("-17.2589").unwrap();
     y = ipow(&x, 5);
     println!("{}^5 = {}", x, y);
+
+    x = BigDecimal::from(2);
+    y = ipow(&x, 512);
+    println!("{}^512 = {}", x, y);
 }

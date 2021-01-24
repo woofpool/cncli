@@ -1,18 +1,17 @@
 use std::fmt::Display;
 use std::fs::File;
 use std::io::{BufReader, Error, stdout};
-use std::ops::{Div, Mul};
 use std::path::PathBuf;
+use std::str::FromStr;
 
+use bigdecimal::{BigDecimal, FromPrimitive, One};
 use blake2b_simd::Params;
 use byteorder::{ByteOrder, NetworkEndian};
 use chrono::{Duration, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use log::{debug, error, info, trace};
-use rug::{Float, Integer, Rational};
-use rug::float::Round;
+use rug::{Integer, Rational};
 use rug::integer::Order;
-use rug::ops::{Pow, SubFrom};
 use rusqlite::{Connection, named_params, NO_PARAMS, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -21,6 +20,7 @@ use crate::nodeclient::{LedgerSet, PooltoolConfig};
 use crate::nodeclient::leaderlog::deserialize::cbor_hex;
 use crate::nodeclient::leaderlog::ledgerstate::calculate_ledger_state_sigma_and_d;
 use crate::nodeclient::leaderlog::libsodium::{sodium_crypto_vrf_proof_to_hash, sodium_crypto_vrf_prove};
+use crate::nodeclient::math::{ln, normalize, taylor_exp_cmp, TaylorCmp};
 
 mod ledgerstate;
 mod libsodium;
@@ -251,37 +251,6 @@ fn vrf_eval_certified(seed: Vec<u8>, pool_vrf_skey: &Vec<u8>) -> Result<Integer,
     Ok(Integer::from_digits(&*certified_proof_hash, Order::MsfBe))
 }
 
-enum TaylorCmp {
-    Above,
-    Below,
-    MaxReached,
-}
-
-fn taylor_exp_cmp(bound_x: i32, cmp: Float, x: Float) -> TaylorCmp {
-    let max_n: i32 = 1000;
-    let bound_xf: Float = Float::with_val(120, bound_x);
-    let mut divisor: i32 = 1;
-    let mut acc: Float = Float::with_val(120, 1);
-    let mut err: Float = x.clone();
-    let mut error_term: Float = Float::with_val(120, &err * &bound_xf);
-    let mut next_x: Float;
-    for _n in 0..max_n {
-        if cmp >= Float::with_val(120, &acc + &error_term) {
-            return TaylorCmp::Above;
-        } else if cmp < Float::with_val(120, &acc - &error_term) {
-            return TaylorCmp::Below;
-        } else {
-            divisor += 1;
-            next_x = err.clone();
-            err = Float::with_val(120, err.mul(&x).div(divisor));
-            error_term = Float::with_val(120, &err * &bound_xf);
-            acc += next_x;
-        }
-    }
-
-    TaylorCmp::MaxReached
-}
-
 // Determine if our pool is a slot leader for this given slot
 // @param slot The slot to check
 // @param f The activeSlotsCoeff value from protocol params
@@ -294,18 +263,17 @@ fn is_slot_leader(slot: i64, f: &f64, sigma: &Rational, eta0: &Vec<u8>, pool_vrf
     trace!("seed: {}", hex::encode(&seed));
     let cert_nat: Integer = vrf_eval_certified(seed, pool_vrf_skey)?;
     trace!("cert_nat: {}", &cert_nat);
-    let cert_nat_max: Integer = Integer::from(2).pow(512);
-    let denominator = &cert_nat_max - cert_nat;
-    let recip_q: Float = Float::with_val(120, Rational::from((cert_nat_max, denominator)));
-    trace!("recip_q: {}", &recip_q.to_string_radix(10, None));
-    let mut c: Float = Float::with_val(120, f);
-    c.sub_from(1);
-    c.ln_round(Round::Down);
-    trace!("c: {}", &c.to_string_radix(10, None));
-    let x: Float = -c * sigma;
-    trace!("x: {}", &x.to_string_radix(10, None));
+    let cert_nat_max: BigDecimal = BigDecimal::from_str("13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006084096").unwrap(); // 2^512
+    let denominator = &cert_nat_max - BigDecimal::from_str(&*cert_nat.to_string()).unwrap();
+    let recip_q: BigDecimal = normalize(cert_nat_max / denominator);
+    trace!("recip_q: {}", &recip_q);
+    let c: BigDecimal = ln(&(BigDecimal::one() - BigDecimal::from_f64(*f).unwrap()));
+    trace!("c: {}", &c);
+    let s: BigDecimal = normalize(normalize(BigDecimal::from_str(&*sigma.numer().to_string()).unwrap()) / normalize(BigDecimal::from_str(&*sigma.denom().to_string()).unwrap()));
+    let x: BigDecimal = normalize(-c * s);
+    trace!("x: {}", &x);
 
-    match taylor_exp_cmp(3, recip_q, x) {
+    match taylor_exp_cmp(3, &recip_q, &x) {
         TaylorCmp::Above => { Ok(false) }
         TaylorCmp::Below => { Ok(true) }
         TaylorCmp::MaxReached => { Ok(false) }

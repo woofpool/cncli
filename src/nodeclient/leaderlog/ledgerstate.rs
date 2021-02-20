@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::{BufReader, Error};
 use std::path::PathBuf;
 
-use log::debug;
+use log::{debug,error};
 use rug::Rational;
 use serde::Deserialize;
 
-use crate::nodeclient::leaderlog::deserialize::{rational, rational_optional};
+use crate::nodeclient::leaderlog::deserialize::{rational, rational_optional, total_active_stake};
 use crate::nodeclient::LedgerSet;
 
 #[derive(Debug, Deserialize)]
@@ -75,6 +75,11 @@ struct EsSnapshots {
 #[derive(Debug, Deserialize)]
 struct StakeGroup {
     #[serde(rename(deserialize = "_stake"))]
+    #[serde(deserialize_with = "total_active_stake")]
+    total_active_stake:u64,
+
+    // #[serde(rename(deserialize = "_stake"))]
+    #[serde(skip_deserializing)]
     stake: Vec<Vec<Stake>>,
     #[serde(rename(deserialize = "_delegations"))]
     delegations: Vec<Vec<Delegation>>,
@@ -82,7 +87,7 @@ struct StakeGroup {
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum Stake {
+pub(crate) enum Stake {
     StakeKey(Key),
     Lovelace(u64),
 }
@@ -95,7 +100,7 @@ enum Delegation {
 }
 
 #[derive(Debug, Deserialize)]
-struct Key {
+pub(crate) struct Key {
     #[serde(rename(deserialize = "key hash"))]
     key: String,
 }
@@ -127,6 +132,7 @@ fn calculate_sigma(stake_group: StakeGroup, pool_id: &str) -> (u64, u64) {
         .collect();
 
     let mut denominator = 0u64;
+    error!("total_active_stake: {}",stake_group.total_active_stake);
     let numerator: u64 = stake_group
         .stake
         .into_iter()

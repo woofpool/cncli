@@ -36,21 +36,22 @@ jobs:
                   ;;
               esac
 
-              echo "c:/msys64" >> $GITHUB_PATH                # enable msys2 entrypoint commands (probably not needed)
-              echo "c:/msys64/usr/bin" >> $GITHUB_PATH        # place msys2 environment on system path 
-              echo "${MSYSTEM_PATH}/bin" >> $GITHUB_PATH      # place MinGW environment on system path
-              echo "CHERE_INVOKING=yes" >> $GITHUB_ENV        # maintain directory context
-              echo "MSYSTEM=${MSYSTEM}" >> $GITHUB_ENV        # set msystem version for msys2 shell
+              echo "c:/msys64" >> $GITHUB_PATH                                     # enable msys2 entrypoint commands (probably not needed)
+              echo "c:/msys64/usr/bin" >> $GITHUB_PATH                             # place msys2 environment on system path 
+              echo "${MSYSTEM_PATH}/bin" >> $GITHUB_PATH                           # place MinGW environment on system path
+              echo "CHERE_INVOKING=yes" >> $GITHUB_ENV                             # maintain directory context
+              echo "MSYSTEM=${MSYSTEM}" >> $GITHUB_ENV                             # set msystem version for msys2 shell
+              echo "PKG_CONFIG_PATH=${MSYSTEM_PATH}/lib/pkgconfig" >> $GITHUB_ENV  # set pkgconfig path
             ;;
           esac
       - name: Install Prerequisites
         run: |
           case ${{ matrix.job.target }} in
             x86_64-pc-windows-gnu)
-              pacman -S --noconfirm --needed mingw-w64-x86_64-gcc base-devel autoconf
+              pacman -S --noconfirm --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config base-devel autoconf
               ;;
             i686-pc-windows-gnu)
-              pacman -S --noconfirm --needed mingw-w64-i686-gcc base-devel autoconf
+              pacman -S --noconfirm --needed mingw-w64-i686-gcc mingw-w64-i686-pkg-config base-devel autoconf
               ;;
             *-unknown-linux-*)
               sudo apt-get -y update

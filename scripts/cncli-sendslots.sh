@@ -4,8 +4,8 @@ function getStatus() {
     local result
     result=$(/usr/local/bin/cncli status \
         --db /root/scripts/cncli.db \
-        --byron-genesis /home/cardano-node/config/mainnet-byron-genesis.json \
-        --shelley-genesis /home/cardano-node/config/mainnet-shelley-genesis.json \
+        --byron-genesis /home/cardano/cardano-my-node/mainnet-byron-genesis.json \
+        --shelley-genesis /home/cardano/cardano-my-node/mainnet-shelley-genesis.json \
         | jq -r .status
     )
     echo "$result"
@@ -14,8 +14,8 @@ function getStatus() {
 function sendSlots() {
     /usr/local/bin/cncli sendslots \
         --db /root/scripts/cncli.db \
-        --byron-genesis /home/cardano-node/config/mainnet-byron-genesis.json \
-        --shelley-genesis /home/cardano-node/config/mainnet-shelley-genesis.json \
+        --byron-genesis /home/cardano/cardano-my-node/mainnet-byron-genesis.json \
+        --shelley-genesis /home/cardano/cardano-my-node/mainnet-shelley-genesis.json \
         --config /root/scripts/pooltool.json
 }
 
